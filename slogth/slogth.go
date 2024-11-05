@@ -16,10 +16,14 @@ type slogth struct {
 	input  io.Reader
 	output io.Writer
 
-	delay time.Duration
+	delay         time.Duration
+	dropThreshold int
 
 	isTerminating bool
 	queue         *types.TimedQueue[[]byte]
+
+	droppedCount   int
+	processedCount int
 }
 
 func new() *slogth {
@@ -28,36 +32,28 @@ func new() *slogth {
 	}
 }
 
-func (s *slogth) run() error {
-	type entry struct {
-		emitAt time.Time
-		log    []byte
-	}
+type entry struct {
+	emitAt time.Time
+	log    []byte
+}
 
+func (s *slogth) run() error {
 	var (
+		input <-chan entry
+		fail  <-chan error
+		err   error
+
 		tick      = time.NewTicker(min(s.delay/10, time.Second)) // emit at least every second
-		input     = make(chan entry)
-		fail      = make(chan error, 1)
 		terminate = make(chan os.Signal, 1)
-		err       error
 	)
 
 	signal.Notify(terminate, os.Interrupt, syscall.SIGTERM)
 
-	go func() { // read from stdin
-		scanner := bufio.NewScanner(s.input)
-		for scanner.Scan() {
-			input <- entry{
-				emitAt: time.Now().Add(s.delay),
-				log:    append([]byte{}, scanner.Bytes()...), // have to copy over
-			}
-		}
-		if !s.isTerminating {
-			if err := scanner.Err(); err != nil {
-				fail <- err
-			}
-		}
-	}()
+	if s.dropThreshold == 0 {
+		input, fail = s.ingestBlocking()
+	} else {
+		input, fail = s.ingestNonBlocking()
+	}
 
 loop: // emit logs after delay
 	for {
@@ -83,4 +79,54 @@ loop: // emit logs after delay
 	})
 
 	return err
+}
+
+func (s *slogth) ingestBlocking() (<-chan entry, <-chan error) {
+	input := make(chan entry, s.dropThreshold)
+	fail := make(chan error, 1)
+
+	go func() { // read from stdin
+		scanner := bufio.NewScanner(s.input)
+		for scanner.Scan() {
+			input <- entry{
+				emitAt: time.Now().Add(s.delay),
+				log:    append([]byte{}, scanner.Bytes()...), // have to copy over
+			}
+			s.processedCount++
+		}
+		if !s.isTerminating {
+			if err := scanner.Err(); err != nil {
+				fail <- err
+			}
+		}
+	}()
+
+	return input, fail
+}
+
+func (s *slogth) ingestNonBlocking() (<-chan entry, <-chan error) {
+	input := make(chan entry, s.dropThreshold)
+	fail := make(chan error, 1)
+
+	go func() { // read from stdin
+		scanner := bufio.NewScanner(s.input)
+		for scanner.Scan() {
+			select {
+			case input <- entry{
+				emitAt: time.Now().Add(s.delay),
+				log:    append([]byte{}, scanner.Bytes()...), // have to copy over
+			}:
+				s.processedCount++
+			default:
+				s.droppedCount++
+			}
+		}
+		if !s.isTerminating {
+			if err := scanner.Err(); err != nil {
+				fail <- err
+			}
+		}
+	}()
+
+	return input, fail
 }

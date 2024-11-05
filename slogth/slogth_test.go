@@ -20,6 +20,7 @@ func TestSlogth(t *testing.T) {
 	s.input = stdin
 	s.output = stdout
 	s.delay = time.Second
+	s.dropThreshold = 1
 
 	go func() {
 		if err := s.run(); err != nil {
@@ -75,5 +76,6 @@ func TestSlogth(t *testing.T) {
 		assert.Equal(t, 0, s.queue.Length())
 
 		t.Logf("capacity at the end: %d", s.queue.Capacity())
+		t.Logf("dropped/processed count: %d/%d", s.droppedCount, s.processedCount)
 	}
 }

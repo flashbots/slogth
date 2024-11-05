@@ -5,7 +5,7 @@ Ingest logs from stdin and re-emit them with specified delay.
 ## TL;DR
 
 ```shell
-ping 1.1.1.1 | go run github.com/flashbots/slogth/cmd --delay 5s
+ping 1.1.1.1 | ./bin/slogth help --delay 5s
 ```
 
 ```shell
@@ -25,4 +25,33 @@ PING 1.1.1.1 (1.1.1.1): 56 data bytes
 64 bytes from 1.1.1.1: icmp_seq=10 ttl=57 time=46.447 ms
 64 bytes from 1.1.1.1: icmp_seq=11 ttl=57 time=27.891 ms
 64 bytes from 1.1.1.1: icmp_seq=12 ttl=57 time=26.006 ms   # remaining 5 seconds of logs
+```
+
+## Usage
+
+```shell
+./bin/slogth help
+```
+
+```text
+NAME:
+   slogth - delayed logs emission
+
+USAGE:
+   slogth [global options] command [command options]
+
+VERSION:
+   0.0.2
+
+COMMANDS:
+   help  show the list of commands or help for one command
+
+GLOBAL OPTIONS:
+   --version, -v  print the version
+
+   GENERAL
+
+   --delay duration, -d duration  delay ingested logs by specified duration (default: 0s) [$SLOGTH_DELAY]
+   --drop-threshold count         count of in-flight messages at which slogth should start dropping them (rate-limit) (default: 0) [$SLOGTH_DROP_THRESHOLD]
+   --stderr, -e                   use stderr for output (stdout is used by default) (default: false) [$SLOGTH_STDERR]
 ```

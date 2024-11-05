@@ -10,6 +10,7 @@ func Run(cfg *config.Config) error {
 	s := new()
 
 	s.delay = cfg.Delay
+	s.dropThreshold = cfg.DropThreshold
 	s.input = os.Stdin
 
 	if cfg.Stderr {

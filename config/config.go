@@ -5,8 +5,9 @@ import (
 )
 
 type Config struct {
-	Delay  time.Duration
-	Stderr bool
+	Delay         time.Duration
+	DropThreshold int
+	Stderr        bool
 }
 
 func (c *Config) Preprocess() error {

@@ -33,6 +33,15 @@ func main() {
 			Usage:       "delay ingested logs by specified `duration`",
 		},
 
+		&cli.IntFlag{
+			Category:    categoryGeneral,
+			Destination: &cfg.DropThreshold,
+			EnvVars:     []string{envPrefix + "DROP_THRESHOLD"},
+			Name:        "drop-threshold",
+			Usage:       "`count` of in-flight messages at which slogth should start dropping them (rate-limit)",
+			Value:       0,
+		},
+
 		&cli.BoolFlag{
 			Aliases:     []string{"e"},
 			Category:    categoryGeneral,
@@ -51,7 +60,6 @@ func main() {
 
 		Flags: flags,
 
-		HideHelp:        true,
 		HideHelpCommand: true,
 
 		Commands: []*cli.Command{CommandHelp()},
